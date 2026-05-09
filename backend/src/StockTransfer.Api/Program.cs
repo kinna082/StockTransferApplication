@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
@@ -14,6 +15,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 builder.Services.AddDbContext<StockTransferDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "StockTransfer.Api";
@@ -137,6 +142,50 @@ app.MapPost("/api/auth/logout", [Authorize] async (RefreshTokenRequest request, 
     return Results.NoContent();
 });
 
+app.MapPost("/api/auth/change-password", [Authorize] async (
+    ChangePasswordRequest request,
+    StockTransferDbContext db,
+    ClaimsPrincipal principal) =>
+{
+    var userId = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    var user = await db.Users.FirstOrDefaultAsync(x => x.Id == userId);
+    if (user is null) return Results.Unauthorized();
+
+    if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+        return Results.BadRequest("Current and new password are required.");
+
+    if (request.NewPassword.Length < 8)
+        return Results.BadRequest("New password must be at least 8 characters.");
+
+    if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+        return Results.BadRequest("Current password is incorrect.");
+
+    if (BCrypt.Net.BCrypt.Verify(request.NewPassword, user.PasswordHash))
+        return Results.BadRequest("New password must be different from your current password.");
+
+    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+    var now = DateTime.UtcNow;
+    var existingTokens = await db.RefreshTokens.Where(x => x.UserId == userId && x.RevokedAt == null).ToListAsync();
+    foreach (var t in existingTokens)
+        t.RevokedAt = now;
+
+    var newRefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+    var newRefreshTokenHash = ComputeSha256(newRefreshToken);
+    db.RefreshTokens.Add(new RefreshToken
+    {
+        Id = Guid.NewGuid(),
+        UserId = user.Id,
+        TokenHash = newRefreshTokenHash,
+        CreatedAt = DateTime.UtcNow,
+        ExpiresAt = DateTime.UtcNow.AddDays(7)
+    });
+    await db.SaveChangesAsync();
+
+    var accessToken = CreateAccessToken(user, jwtIssuer, jwtAudience, signingKey);
+    return Results.Ok(new LoginResponse(accessToken, newRefreshToken, user.RoleName, user.Id, user.BranchId, user.FullName));
+});
+
 static string CreateAccessToken(AppUser user, string issuer, string audience, SymmetricSecurityKey signingKey)
 {
     var claims = new List<Claim>
@@ -164,6 +213,16 @@ static string ComputeSha256(string value)
     return Convert.ToHexString(bytes);
 }
 
+static string EscapeCsv(string value)
+{
+    if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
+    {
+        return $"\"{value.Replace("\"", "\"\"")}\"";
+    }
+
+    return value;
+}
+
 app.MapGet("/api/branches", [Authorize] async (StockTransferDbContext db) =>
 {
     var branches = await db.Branches
@@ -174,9 +233,264 @@ app.MapGet("/api/branches", [Authorize] async (StockTransferDbContext db) =>
     return Results.Ok(branches);
 });
 
+app.MapGet("/api/products", [Authorize] async (StockTransferDbContext db) =>
+{
+    var products = await db.Products
+        .OrderBy(x => x.ProductName)
+        .Select(x => new ProductDto(x.Id, x.ProductCode, x.ProductName))
+        .ToListAsync();
+
+    return Results.Ok(products);
+});
+
+app.MapGet("/api/products/paged", [Authorize] async (
+    StockTransferDbContext db,
+    int page = 1,
+    int pageSize = 10,
+    string? search = null,
+    string? sortBy = "productName",
+    string? sortDirection = "asc") =>
+{
+    if (page <= 0) page = 1;
+    if (pageSize <= 0) pageSize = 10;
+    if (pageSize > 100) pageSize = 100;
+
+    var query = db.Products.AsQueryable();
+    if (!string.IsNullOrWhiteSpace(search))
+    {
+        var searchText = search.Trim();
+        query = query.Where(x => x.ProductCode.Contains(searchText) || x.ProductName.Contains(searchText));
+    }
+
+    var sortByNormalized = (sortBy ?? "productName").Trim().ToLowerInvariant();
+    var sortDesc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+    query = (sortByNormalized, sortDesc) switch
+    {
+        ("productcode", true) => query.OrderByDescending(x => x.ProductCode),
+        ("productcode", false) => query.OrderBy(x => x.ProductCode),
+        ("productname", true) => query.OrderByDescending(x => x.ProductName),
+        _ => query.OrderBy(x => x.ProductName)
+    };
+
+    var totalCount = await query.CountAsync();
+    var items = await query
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(x => new ProductDto(x.Id, x.ProductCode, x.ProductName))
+        .ToListAsync();
+
+    return Results.Ok(new PagedResult<ProductDto>(page, pageSize, totalCount, items));
+});
+
+app.MapPost("/api/products", [Authorize(Roles = "ADMIN")] async (CreateProductRequest request, StockTransferDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.ProductCode) || string.IsNullOrWhiteSpace(request.ProductName))
+    {
+        return Results.BadRequest("Product code and product name are required.");
+    }
+
+    var normalizedCode = request.ProductCode.Trim();
+    var exists = await db.Products.AnyAsync(x => x.ProductCode == normalizedCode);
+    if (exists) return Results.BadRequest("Product code already exists.");
+
+    var product = new Product
+    {
+        ProductCode = normalizedCode,
+        ProductName = request.ProductName.Trim()
+    };
+
+    db.Products.Add(product);
+    await db.SaveChangesAsync();
+    return Results.Created($"/api/products/{product.Id}", new ProductDto(product.Id, product.ProductCode, product.ProductName));
+});
+
+app.MapPut("/api/products/{id:int}", [Authorize(Roles = "ADMIN")] async (int id, CreateProductRequest request, StockTransferDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.ProductCode) || string.IsNullOrWhiteSpace(request.ProductName))
+    {
+        return Results.BadRequest("Product code and product name are required.");
+    }
+
+    var product = await db.Products.FirstOrDefaultAsync(x => x.Id == id);
+    if (product is null) return Results.NotFound();
+
+    var normalizedCode = request.ProductCode.Trim();
+    var duplicate = await db.Products.AnyAsync(x => x.Id != id && x.ProductCode == normalizedCode);
+    if (duplicate) return Results.BadRequest("Product code already exists.");
+
+    product.ProductCode = normalizedCode;
+    product.ProductName = request.ProductName.Trim();
+    await db.SaveChangesAsync();
+    return Results.Ok(new ProductDto(product.Id, product.ProductCode, product.ProductName));
+});
+
+app.MapDelete("/api/products/{id:int}", [Authorize(Roles = "ADMIN")] async (int id, StockTransferDbContext db) =>
+{
+    var product = await db.Products.FirstOrDefaultAsync(x => x.Id == id);
+    if (product is null) return Results.NotFound();
+
+    var usedInTransfers = await db.StockTransferItems.AnyAsync(x => x.ProductCode == product.ProductCode);
+    if (usedInTransfers)
+    {
+        return Results.BadRequest("Cannot delete product because it is already used in transfers.");
+    }
+
+    db.Products.Remove(product);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
+app.MapGet("/api/statuses", [Authorize] async (StockTransferDbContext db) =>
+{
+    var statuses = await db.StatusMasters
+        .Where(x => x.IsActive)
+        .OrderBy(x => x.Id)
+        .Select(x => new StatusDto(x.Id, x.StatusName))
+        .ToListAsync();
+
+    return Results.Ok(statuses);
+});
+
+app.MapGet("/api/users", [Authorize(Roles = "ADMIN")] async (StockTransferDbContext db) =>
+{
+    var userRows = await db.Users
+        .AsNoTracking()
+        .OrderBy(u => u.FullName)
+        .ToListAsync();
+
+    var branchIds = userRows
+        .Where(u => u.BranchId.HasValue)
+        .Select(u => u.BranchId!.Value)
+        .Distinct()
+        .ToList();
+
+    var branchNames = await db.Branches
+        .AsNoTracking()
+        .Where(b => branchIds.Contains(b.Id))
+        .ToDictionaryAsync(b => b.Id, b => b.BranchName);
+
+    var users = userRows.Select(u =>
+    {
+        var branchName = u.BranchId is int bid && branchNames.TryGetValue(bid, out var bn) ? bn : "";
+        return new UserDto(u.Id, u.FullName, u.Email, u.RoleName, u.BranchId ?? 0, branchName);
+    }).ToList();
+
+    return Results.Ok(users);
+});
+
+app.MapPost("/api/users", [Authorize(Roles = "ADMIN")] async (CreateUserRequest request, StockTransferDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.FullName) ||
+        string.IsNullOrWhiteSpace(request.Email) ||
+        string.IsNullOrWhiteSpace(request.Password) ||
+        string.IsNullOrWhiteSpace(request.RoleName))
+    {
+        return Results.BadRequest("All fields are required.");
+    }
+
+    if (request.BranchId <= 0)
+    {
+        return Results.BadRequest("Branch is required.");
+    }
+
+    var branchExists = await db.Branches.AnyAsync(x => x.Id == request.BranchId);
+    if (!branchExists) return Results.BadRequest("Invalid branch.");
+
+    var exists = await db.Users.AnyAsync(x => x.Email == request.Email);
+    if (exists) return Results.BadRequest("Email already exists.");
+
+    var user = new AppUser
+    {
+        FullName = request.FullName.Trim(),
+        Email = request.Email.Trim(),
+        PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+        RoleName = request.RoleName.Trim(),
+        BranchId = request.BranchId
+    };
+
+    db.Users.Add(user);
+    await db.SaveChangesAsync();
+    return Results.Created($"/api/users/{user.Id}", new { user.Id, user.FullName, user.Email, user.RoleName, user.BranchId });
+});
+
+app.MapPut("/api/users/{id:int}", [Authorize(Roles = "ADMIN")] async (
+    int id,
+    UpdateUserRequest request,
+    StockTransferDbContext db,
+    ClaimsPrincipal principal) =>
+{
+    if (string.IsNullOrWhiteSpace(request.FullName) ||
+        string.IsNullOrWhiteSpace(request.Email) ||
+        string.IsNullOrWhiteSpace(request.RoleName))
+    {
+        return Results.BadRequest("Full name, email, and role are required.");
+    }
+
+    var roleNormalized = request.RoleName.Trim();
+    if (!string.Equals(roleNormalized, "ADMIN", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(roleNormalized, "STORE_MANAGER", StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.BadRequest("Invalid role.");
+    }
+
+    var isManager = string.Equals(roleNormalized, "STORE_MANAGER", StringComparison.OrdinalIgnoreCase);
+    if (isManager && request.BranchId <= 0)
+        return Results.BadRequest("Branch is required for store managers.");
+
+    if (request.BranchId > 0 && !await db.Branches.AnyAsync(x => x.Id == request.BranchId))
+        return Results.BadRequest("Invalid branch.");
+
+    var user = await db.Users.FirstOrDefaultAsync(x => x.Id == id);
+    if (user is null) return Results.NotFound();
+
+    var emailTrimmed = request.Email.Trim();
+    var duplicate = await db.Users.AnyAsync(x => x.Id != id && x.Email == emailTrimmed);
+    if (duplicate) return Results.BadRequest("Email already exists.");
+
+    if (!string.IsNullOrWhiteSpace(request.NewPassword) && request.NewPassword.Length < 8)
+        return Results.BadRequest("New password must be at least 8 characters.");
+
+    user.FullName = request.FullName.Trim();
+    user.Email = emailTrimmed;
+    user.RoleName = roleNormalized.Equals("ADMIN", StringComparison.OrdinalIgnoreCase) ? "ADMIN" : "STORE_MANAGER";
+    user.BranchId = isManager ? request.BranchId : (request.BranchId > 0 ? request.BranchId : null);
+
+    if (!string.IsNullOrWhiteSpace(request.NewPassword))
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword.Trim());
+
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
+app.MapDelete("/api/users/{id:int}", [Authorize(Roles = "ADMIN")] async (int id, StockTransferDbContext db, ClaimsPrincipal principal) =>
+{
+    var currentUserId = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    if (id == currentUserId)
+        return Results.BadRequest("You cannot delete your own account.");
+
+    var user = await db.Users.FirstOrDefaultAsync(x => x.Id == id);
+    if (user is null) return Results.NotFound();
+
+    var hasTransfers = await db.StockTransfers.AnyAsync(x => x.CreatedByUserId == id);
+    if (hasTransfers)
+        return Results.BadRequest("Cannot delete user who created stock transfers.");
+
+    var refreshTokens = await db.RefreshTokens.Where(x => x.UserId == id).ToListAsync();
+    db.RefreshTokens.RemoveRange(refreshTokens);
+    db.Users.Remove(user);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
 app.MapPost("/api/transfers", [Authorize(Roles = "STORE_MANAGER")] async (CreateTransferRequest request, StockTransferDbContext db, ClaimsPrincipal principal) =>
 {
-    if (request.SourceBranchId == request.DestinationBranchId)
+    var userId = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    var user = await db.Users.FirstOrDefaultAsync(x => x.Id == userId);
+    if (user?.BranchId is null) return Results.BadRequest("Manager is not mapped to a source branch.");
+
+    var sourceBranchId = user.BranchId.Value;
+    if (sourceBranchId == request.DestinationBranchId)
         return Results.BadRequest("Source and destination branch must be different.");
 
     if (request.Items.Count == 0 || request.Items.Any(i => i.Quantity <= 0))
@@ -186,11 +500,11 @@ app.MapPost("/api/transfers", [Authorize(Roles = "STORE_MANAGER")] async (Create
     {
         Id = Guid.NewGuid(),
         TransferNo = $"TRN-{DateTime.UtcNow:yyyyMMddHHmmssfff}",
-        SourceBranchId = request.SourceBranchId,
+        SourceBranchId = sourceBranchId,
         DestinationBranchId = request.DestinationBranchId,
         TransferDate = request.TransferDate,
         Status = TransferStatus.Submitted,
-        CreatedByUserId = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!),
+        CreatedByUserId = userId,
         CreatedAt = DateTime.UtcNow,
         UpdatedAt = DateTime.UtcNow,
         Items = request.Items.Select(i => new StockTransferItem
@@ -230,9 +544,10 @@ app.MapGet("/api/transfers", [Authorize] async (
         .Include(x => x.Items)
         .AsQueryable();
 
-    if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<TransferStatus>(status, true, out var parsedStatus))
+    if (!string.IsNullOrWhiteSpace(status) &&
+        Enum.TryParse<TransferStatus>(status, ignoreCase: true, out var statusFilter))
     {
-        query = query.Where(x => x.Status == parsedStatus);
+        query = query.Where(x => x.Status == statusFilter);
     }
 
     if (role == "STORE_MANAGER")
@@ -261,20 +576,95 @@ app.MapGet("/api/transfers", [Authorize] async (
     return Results.Ok(new PagedResult<TransferDto>(page, pageSize, totalCount, result.ToList()));
 });
 
-app.MapPatch("/api/transfers/{id:guid}/status", [Authorize(Roles = "ADMIN")] async (Guid id, TransferStatus status, StockTransferDbContext db) =>
+app.MapGet("/api/transfers/{id:guid}/details", [Authorize] async (
+    Guid id,
+    StockTransferDbContext db,
+    ClaimsPrincipal principal) =>
+{
+    var role = principal.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+    var userId = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    var query = db.StockTransfers.Include(x => x.Items).Where(x => x.Id == id);
+
+    if (role == "STORE_MANAGER")
+    {
+        query = query.Where(x => x.CreatedByUserId == userId);
+    }
+
+    var transfer = await query.FirstOrDefaultAsync();
+    if (transfer is null) return Results.NotFound();
+
+    var sourceBranch = await db.Branches.FirstOrDefaultAsync(x => x.Id == transfer.SourceBranchId);
+    var destinationBranch = await db.Branches.FirstOrDefaultAsync(x => x.Id == transfer.DestinationBranchId);
+
+    return Results.Ok(new
+    {
+        transfer.Id,
+        transfer.TransferNo,
+        TransferDate = transfer.TransferDate.ToString("yyyy-MM-dd"),
+        transfer.Status,
+        SourceBranchCode = sourceBranch?.BranchCode ?? string.Empty,
+        SourceBranchName = sourceBranch?.BranchName ?? string.Empty,
+        DestinationBranchCode = destinationBranch?.BranchCode ?? string.Empty,
+        DestinationBranchName = destinationBranch?.BranchName ?? string.Empty,
+        Items = transfer.Items.Select(i => new
+        {
+            i.ProductCode,
+            i.ProductName,
+            i.Quantity
+        })
+    });
+});
+
+app.MapGet("/api/transfers/{id:guid}/export", [Authorize] async (
+    Guid id,
+    StockTransferDbContext db,
+    ClaimsPrincipal principal) =>
+{
+    var role = principal.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+    var userId = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    var query = db.StockTransfers.Include(x => x.Items).Where(x => x.Id == id);
+
+    if (role == "STORE_MANAGER")
+    {
+        query = query.Where(x => x.CreatedByUserId == userId);
+    }
+
+    var transfer = await query.FirstOrDefaultAsync();
+    if (transfer is null) return Results.NotFound();
+
+    var sourceBranch = await db.Branches.FirstOrDefaultAsync(x => x.Id == transfer.SourceBranchId);
+    var destinationBranch = await db.Branches.FirstOrDefaultAsync(x => x.Id == transfer.DestinationBranchId);
+
+    var sb = new StringBuilder();
+    sb.AppendLine("TransferNo,TransferDate,SourceBranchCode,SourceBranchName,DestinationBranchCode,DestinationBranchName,ProductCode,ProductName,Quantity,Status");
+    foreach (var item in transfer.Items)
+    {
+        sb.AppendLine($"{EscapeCsv(transfer.TransferNo)},{transfer.TransferDate:yyyy-MM-dd},{EscapeCsv(sourceBranch?.BranchCode ?? string.Empty)},{EscapeCsv(sourceBranch?.BranchName ?? string.Empty)},{EscapeCsv(destinationBranch?.BranchCode ?? string.Empty)},{EscapeCsv(destinationBranch?.BranchName ?? string.Empty)},{EscapeCsv(item.ProductCode)},{EscapeCsv(item.ProductName)},{item.Quantity},{EscapeCsv(transfer.Status.ToString())}");
+    }
+
+    var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+    var fileName = $"transfer-{transfer.TransferNo}.csv";
+    return Results.File(bytes, "text/csv", fileName);
+});
+
+app.MapPatch("/api/transfers/{id:guid}/status", [Authorize(Roles = "ADMIN")] async (Guid id, string status, StockTransferDbContext db) =>
 {
     var transfer = await db.StockTransfers.FirstOrDefaultAsync(t => t.Id == id);
     if (transfer is null) return Results.NotFound();
 
-    var validTransition =
-        (transfer.Status == TransferStatus.Submitted && status == TransferStatus.Inprogress) ||
-        (transfer.Status == TransferStatus.Inprogress && status == TransferStatus.Completed) ||
-        (transfer.Status == status);
+    var statuses = await db.StatusMasters
+        .Where(x => x.IsActive)
+        .OrderBy(x => x.Id)
+        .Select(x => x.StatusName)
+        .ToListAsync();
 
-    if (!validTransition)
-        return Results.BadRequest("Invalid status transition.");
+    if (!statuses.Contains(status))
+        return Results.BadRequest("Invalid status.");
 
-    transfer.Status = status;
+    if (!Enum.TryParse<TransferStatus>(status, true, out var parsedStatus))
+        return Results.BadRequest("Status not mapped in application.");
+
+    transfer.Status = parsedStatus;
     transfer.UpdatedAt = DateTime.UtcNow;
     await db.SaveChangesAsync();
 

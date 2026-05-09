@@ -12,6 +12,8 @@ public class StockTransferDbContext : DbContext
     public DbSet<StockTransferHeader> StockTransfers => Set<StockTransferHeader>();
     public DbSet<StockTransferItem> StockTransferItems => Set<StockTransferItem>();
     public DbSet<Branch> Branches => Set<Branch>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<StatusMaster> StatusMasters => Set<StatusMaster>();
     public DbSet<AppUser> Users => Set<AppUser>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
@@ -24,6 +26,24 @@ public class StockTransferDbContext : DbContext
             entity.Property(x => x.Id).HasColumnName("id");
             entity.Property(x => x.BranchCode).HasColumnName("branch_code");
             entity.Property(x => x.BranchName).HasColumnName("branch_name");
+        });
+
+        modelBuilder.Entity<Product>(entity =>
+        {
+            entity.ToTable("products");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasColumnName("id");
+            entity.Property(x => x.ProductCode).HasColumnName("product_code");
+            entity.Property(x => x.ProductName).HasColumnName("product_name");
+        });
+
+        modelBuilder.Entity<StatusMaster>(entity =>
+        {
+            entity.ToTable("status_master");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasColumnName("id");
+            entity.Property(x => x.StatusName).HasColumnName("status_name");
+            entity.Property(x => x.IsActive).HasColumnName("is_active");
         });
 
         modelBuilder.Entity<StockTransferHeader>(entity =>

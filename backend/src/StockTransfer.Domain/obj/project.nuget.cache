@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "ZBdWG3pBXVg=",
+  "dgSpecHash": "hOufCXqfzD4=",
   "success": true,
-  "projectFilePath": "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Domain\\StockTransfer.Domain.csproj",
+  "projectFilePath": "C:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Domain\\StockTransfer.Domain.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

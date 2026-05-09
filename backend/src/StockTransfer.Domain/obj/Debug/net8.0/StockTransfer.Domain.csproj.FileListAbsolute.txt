@@ -1,0 +1,12 @@
+c:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\bin\Debug\net8.0\StockTransfer.Domain.deps.json
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\bin\Debug\net8.0\StockTransfer.Domain.dll
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\bin\Debug\net8.0\StockTransfer.Domain.pdb
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\obj\Debug\net8.0\StockTransfer.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\obj\Debug\net8.0\StockTransfer.Domain.AssemblyInfoInputs.cache
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\obj\Debug\net8.0\StockTransfer.Domain.AssemblyInfo.cs
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\obj\Debug\net8.0\StockTransfer.Domain.csproj.CoreCompileInputs.cache
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\obj\Debug\net8.0\StockTransfer.Domain.sourcelink.json
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\obj\Debug\net8.0\StockTransfer.Domain.dll
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\obj\Debug\net8.0\refint\StockTransfer.Domain.dll
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\obj\Debug\net8.0\StockTransfer.Domain.pdb
+c:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Domain\obj\Debug\net8.0\ref\StockTransfer.Domain.dll

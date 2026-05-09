@@ -4,7 +4,7 @@ import { createTransfer, getBranches, getProducts } from "../../services/api";
 const emptyRow = { productCode: "", productName: "", quantity: 0 };
 
 export default function CreateTransferPage() {
-  const [sourceBranchId, setSourceBranchId] = useState("");
+  const [sourceBranchId, setSourceBranchId] = useState(localStorage.getItem("userBranchId") || "");
   const [destinationBranchId, setDestinationBranchId] = useState("");
   const [transferDate, setTransferDate] = useState("");
   const [rows, setRows] = useState([{ ...emptyRow }]);
@@ -12,12 +12,15 @@ export default function CreateTransferPage() {
   const [products, setProducts] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [sourceBranchLabel, setSourceBranchLabel] = useState("");
 
   useEffect(() => {
     Promise.all([getBranches(), getProducts()])
       .then(([branchData, productData]) => {
         setBranches(branchData);
         setProducts(productData);
+        const source = branchData.find((b) => String(b.id) === String(localStorage.getItem("userBranchId") || ""));
+        setSourceBranchLabel(source ? `${source.branchCode} - ${source.branchName}` : "Branch not mapped");
       })
       .catch(() => setMessage("Could not load master data. Check API/DB connection."));
   }, []);
@@ -77,17 +80,7 @@ export default function CreateTransferPage() {
       <div className="grid-form">
         <label>
           Source Branch
-          <select
-            value={sourceBranchId}
-            onChange={(e) => setSourceBranchId(e.target.value)}
-          >
-            <option value="">Select source</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.branchCode} - {b.branchName}
-              </option>
-            ))}
-          </select>
+          <input value={sourceBranchLabel} readOnly />
         </label>
         <label>
           Destination Branch
@@ -109,6 +102,7 @@ export default function CreateTransferPage() {
         </label>
       </div>
 
+      <div className="table-responsive">
       <table>
         <thead>
           <tr>
@@ -129,7 +123,12 @@ export default function CreateTransferPage() {
                 />
               </td>
               <td>
-                <input value={row.productName} onChange={(e) => updateRow(index, "productName", e.target.value)} />
+                <textarea
+                  value={row.productName}
+                  onChange={(e) => updateRow(index, "productName", e.target.value)}
+                  maxLength={150}
+                  rows={2}
+                />
               </td>
               <td>
                 <input
@@ -148,6 +147,7 @@ export default function CreateTransferPage() {
           ))}
         </tbody>
       </table>
+      </div>
 
       <div className="actions">
         <button type="button" onClick={addRow}>

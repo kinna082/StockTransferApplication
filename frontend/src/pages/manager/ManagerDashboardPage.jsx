@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getBranches, getTransfers } from "../../services/api";
+import { getBranches, getStatuses, getTransfers } from "../../services/api";
 
 export default function ManagerDashboardPage() {
   const [transfers, setTransfers] = useState([]);
@@ -8,21 +8,49 @@ export default function ManagerDashboardPage() {
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [status, setStatus] = useState("");
+  const [statuses, setStatuses] = useState([]);
 
   useEffect(() => {
-    Promise.all([getTransfers({ page, pageSize, status }), getBranches()])
-      .then(([transferData, branches]) => {
-        setTransfers(transferData.items);
-        setTotalCount(transferData.totalCount);
+    let cancelled = false;
+    (async () => {
+      try {
+        const [branches, statusData] = await Promise.all([getBranches(), getStatuses()]);
+        if (cancelled) return;
         const map = {};
         branches.forEach((b) => {
           map[b.id] = `${b.branchCode} - ${b.branchName}`;
         });
         setBranchMap(map);
-      })
-      .catch(() => {
-        setTransfers([]);
-      });
+        setStatuses(statusData);
+      } catch {
+        if (!cancelled) {
+          setStatuses([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const transferData = await getTransfers({ page, pageSize, status });
+        if (cancelled) return;
+        setTransfers(transferData.items);
+        setTotalCount(transferData.totalCount);
+      } catch {
+        if (!cancelled) {
+          setTransfers([]);
+          setTotalCount(0);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [page, pageSize, status]);
 
   return (
@@ -32,14 +60,23 @@ export default function ManagerDashboardPage() {
       <div className="actions">
         <label>
           Status
-          <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
+          <select
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              setPage(1);
+            }}
+          >
             <option value="">All</option>
-            <option value="Submitted">Submitted</option>
-            <option value="Inprogress">Inprogress</option>
-            <option value="Completed">Completed</option>
+            {statuses.map((s) => (
+              <option key={s.id} value={s.statusName}>
+                {s.statusName}
+              </option>
+            ))}
           </select>
         </label>
       </div>
+      <div className="table-responsive">
       <table>
         <thead>
           <tr>
@@ -67,7 +104,8 @@ export default function ManagerDashboardPage() {
           )}
         </tbody>
       </table>
-      <div className="actions">
+      </div>
+      <div className="pagination-bar">
         <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
           Previous
         </button>

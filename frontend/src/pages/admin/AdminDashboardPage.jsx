@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
-import { getBranches, getTransfers, updateTransferStatus } from "../../services/api";
-
-function nextStatus(currentStatus) {
-  if (currentStatus === "Submitted") return "Inprogress";
-  if (currentStatus === "Inprogress") return "Completed";
-  return null;
-}
+import { downloadTransferExcel, getBranches, getStatuses, getTransfers, updateTransferStatus } from "../../services/api";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminDashboardPage() {
+  const navigate = useNavigate();
   const [transfers, setTransfers] = useState([]);
   const [branchMap, setBranchMap] = useState({});
   const [message, setMessage] = useState("");
@@ -15,12 +11,20 @@ export default function AdminDashboardPage() {
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [status, setStatus] = useState("");
+  const [statuses, setStatuses] = useState([]);
+  const [editingTransferId, setEditingTransferId] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState("");
 
   const load = async () => {
     try {
-      const [transferData, branches] = await Promise.all([getTransfers({ page, pageSize, status }), getBranches()]);
+      const [transferData, branches, statusData] = await Promise.all([
+        getTransfers({ page, pageSize, status }),
+        getBranches(),
+        getStatuses()
+      ]);
       setTransfers(transferData.items);
       setTotalCount(transferData.totalCount);
+      setStatuses(statusData);
       const map = {};
       branches.forEach((b) => {
         map[b.id] = `${b.branchCode} - ${b.branchName}`;
@@ -42,9 +46,21 @@ export default function AdminDashboardPage() {
       await updateTransferStatus(transferId, status);
       await load();
       setMessage("Status updated.");
+      setEditingTransferId(null);
+      setSelectedStatus("");
     } catch (error) {
       setMessage(error.message || "Failed to update status.");
     }
+  };
+
+  const startEditStatus = (transferId, currentStatus) => {
+    setEditingTransferId(transferId);
+    setSelectedStatus(currentStatus);
+  };
+
+  const cancelEditStatus = () => {
+    setEditingTransferId(null);
+    setSelectedStatus("");
   };
 
   return (
@@ -54,15 +70,24 @@ export default function AdminDashboardPage() {
       <div className="actions">
         <label>
           Status
-          <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
+          <select
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              setPage(1);
+            }}
+          >
             <option value="">All</option>
-            <option value="Submitted">Submitted</option>
-            <option value="Inprogress">Inprogress</option>
-            <option value="Completed">Completed</option>
+            {statuses.map((s) => (
+              <option key={s.id} value={s.statusName}>
+                {s.statusName}
+              </option>
+            ))}
           </select>
         </label>
       </div>
-      <table>
+      <div className="table-responsive">
+        <table>
         <thead>
           <tr>
             <th>Transfer No</th>
@@ -70,12 +95,11 @@ export default function AdminDashboardPage() {
             <th>Source</th>
             <th>Destination</th>
             <th>Status</th>
-            <th>Action</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {transfers.map((t) => {
-            const next = nextStatus(t.status);
             return (
               <tr key={t.id}>
                 <td>{t.transferNo}</td>
@@ -84,9 +108,35 @@ export default function AdminDashboardPage() {
                 <td>{branchMap[t.destinationBranchId] || t.destinationBranchId}</td>
                 <td>{t.status}</td>
                 <td>
-                  <button type="button" disabled={!next} onClick={() => handleStatusUpdate(t.id, next)}>
-                    {next ? `Move to ${next}` : "Completed"}
-                  </button>
+                  <div className="actions">
+                    {editingTransferId === t.id ? (
+                      <>
+                        <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
+                          {statuses.map((s) => (
+                            <option key={s.id} value={s.statusName}>
+                              {s.statusName}
+                            </option>
+                          ))}
+                        </select>
+                        <button type="button" onClick={() => handleStatusUpdate(t.id, selectedStatus)}>
+                          Save
+                        </button>
+                        <button type="button" onClick={cancelEditStatus}>
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => startEditStatus(t.id, t.status)}>
+                        Edit Status
+                      </button>
+                    )}
+                    <button type="button" onClick={() => navigate(`/admin/transfers/${t.id}/details`)}>
+                      Details
+                    </button>
+                    <button type="button" onClick={() => downloadTransferExcel(t.id)}>
+                      Download Excel
+                    </button>
+                  </div>
                 </td>
               </tr>
             );
@@ -97,8 +147,9 @@ export default function AdminDashboardPage() {
             </tr>
           )}
         </tbody>
-      </table>
-      <div className="actions">
+        </table>
+      </div>
+      <div className="pagination-bar">
         <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
           Previous
         </button>

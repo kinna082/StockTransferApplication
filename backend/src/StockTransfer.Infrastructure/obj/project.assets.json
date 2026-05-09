@@ -4109,11 +4109,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Infrastructure\\StockTransfer.Infrastructure.csproj",
+      "projectUniqueName": "C:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Infrastructure\\StockTransfer.Infrastructure.csproj",
       "projectName": "StockTransfer.Infrastructure",
-      "projectPath": "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Infrastructure\\StockTransfer.Infrastructure.csproj",
+      "projectPath": "C:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Infrastructure\\StockTransfer.Infrastructure.csproj",
       "packagesPath": "C:\\Users\\vineesha\\.nuget\\packages\\",
-      "outputPath": "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Infrastructure\\obj\\",
+      "outputPath": "C:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Infrastructure\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
@@ -4131,11 +4131,11 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Application\\StockTransfer.Application.csproj": {
-              "projectPath": "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Application\\StockTransfer.Application.csproj"
+            "C:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Application\\StockTransfer.Application.csproj": {
+              "projectPath": "C:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Application\\StockTransfer.Application.csproj"
             },
-            "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Domain\\StockTransfer.Domain.csproj": {
-              "projectPath": "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Domain\\StockTransfer.Domain.csproj"
+            "C:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Domain\\StockTransfer.Domain.csproj": {
+              "projectPath": "C:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Domain\\StockTransfer.Domain.csproj"
             }
           }
         }

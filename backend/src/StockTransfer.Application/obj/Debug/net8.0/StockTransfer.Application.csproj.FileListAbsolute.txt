@@ -1,0 +1,16 @@
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\bin\Debug\net8.0\StockTransfer.Application.deps.json
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\bin\Debug\net8.0\StockTransfer.Application.dll
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\bin\Debug\net8.0\StockTransfer.Application.pdb
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\bin\Debug\net8.0\StockTransfer.Domain.dll
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\bin\Debug\net8.0\StockTransfer.Domain.pdb
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\obj\Debug\net8.0\StockTransfer.Application.csproj.AssemblyReference.cache
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\obj\Debug\net8.0\StockTransfer.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\obj\Debug\net8.0\StockTransfer.Application.AssemblyInfoInputs.cache
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\obj\Debug\net8.0\StockTransfer.Application.AssemblyInfo.cs
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\obj\Debug\net8.0\StockTransfer.Application.csproj.CoreCompileInputs.cache
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\obj\Debug\net8.0\StockTransfer.Application.sourcelink.json
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\obj\Debug\net8.0\StockTra.8B3EC884.Up2Date
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\obj\Debug\net8.0\StockTransfer.Application.dll
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\obj\Debug\net8.0\refint\StockTransfer.Application.dll
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\obj\Debug\net8.0\StockTransfer.Application.pdb
+C:\gitrepos\StockTransferApplication\backend\src\StockTransfer.Application\obj\Debug\net8.0\ref\StockTransfer.Application.dll

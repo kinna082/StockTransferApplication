@@ -37,6 +37,20 @@ public class Branch
     public string BranchName { get; set; } = string.Empty;
 }
 
+public class Product
+{
+    public int Id { get; set; }
+    public string ProductCode { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+}
+
+public class StatusMaster
+{
+    public int Id { get; set; }
+    public string StatusName { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+}
+
 public class AppUser
 {
     public int Id { get; set; }

@@ -1,26 +1,135 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: Outfit, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "kern" 1, "liga" 1;
   background: #f5f7fb;
   color: #1d2433;
+  line-height: 1.45;
+  min-height: 100%;
+}
+
+#root {
+  min-height: 100%;
 }
 
 .app-shell {
   max-width: 1100px;
   margin: 0 auto;
   padding: 1rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.site-header {
+  background: linear-gradient(180deg, #e8f4fc 0%, #d4e9f7 100%);
+  border: 1px solid #b8d4e8;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
   margin-bottom: 1rem;
 }
 
-nav {
+.site-banner {
+  margin-bottom: 0.75rem;
+}
+
+.site-brand {
   display: flex;
+  align-items: center;
   gap: 0.75rem;
+  text-decoration: none;
+  color: #1d2433;
+  min-width: 0;
+}
+
+.site-logo {
+  flex-shrink: 0;
+  display: block;
+  max-height: 4.5rem;
+  max-width: 14rem;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(29, 36, 51, 0.12);
+}
+
+.site-brand-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  max-width: 100%;
+}
+
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.app-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  justify-content: flex-end;
+}
+
+.app-nav a {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.6rem;
+  touch-action: manipulation;
+}
+
+.app-nav button {
+  display: inline-flex;
+  align-items: center;
+  touch-action: manipulation;
+}
+
+.app-nav-user-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem 0.75rem;
+  width: 100%;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(120, 160, 195, 0.45);
+}
+
+.app-nav-user {
+  font-size: 0.875rem;
+  color: #3d4656;
+}
+
+.site-footer {
+  margin-top: auto;
+  padding: 1rem 0.5rem 0.25rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #5a6275;
+  border-top: 1px solid #d7dbea;
+}
+
+.site-footer-copy {
+  margin: 0;
 }
 
 nav a {
@@ -32,29 +141,146 @@ main {
   background: white;
   border-radius: 8px;
   padding: 1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+section {
+  min-width: 0;
+}
+
+section h2,
+section h3 {
+  word-break: break-word;
 }
 
 .grid-form {
   display: grid;
-  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+/* Exactly two controls per row (e.g. Create User) */
+.grid-form.grid-form--two-cols {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Primary actions in forms: match input control height */
+.grid-form > button {
+  min-height: 2.25rem;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.75rem;
+  align-self: stretch;
+}
+
+.grid-form .form-row-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.grid-form .form-row-actions button {
+  min-height: 2.25rem;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.75rem;
+}
+
+button.btn-secondary {
+  background: #fff;
+  color: #2a3344;
+  border: 1px solid #c5cdd8;
+  box-shadow: 0 1px 2px rgba(20, 28, 44, 0.06);
+}
+
+button.btn-secondary:hover:not(:disabled) {
+  background: #f0f3f8;
+  border-color: #a8b4c4;
+  box-shadow: 0 1px 3px rgba(20, 28, 44, 0.1);
 }
 
 label {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 input,
 select,
+textarea {
+  padding: 0.35rem 0.45rem;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  max-width: 100%;
+  min-height: 2.25rem;
+  border: 1px solid #c5cdd8;
+  border-radius: 5px;
+  background: #fff;
+  color: inherit;
+  touch-action: manipulation;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #6eb3e8;
+  outline-offset: 1px;
+  border-color: #7aa8d4;
+}
+
 button {
-  padding: 0.45rem;
+  padding: 0.35rem 0.8rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.25;
+  max-width: 100%;
+  min-height: 2.125rem;
+  touch-action: manipulation;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  background: #2a3344;
+  color: #f4f6fa;
+  box-shadow: 0 1px 2px rgba(20, 28, 44, 0.12);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+button:hover:not(:disabled) {
+  background: #1e2533;
+  box-shadow: 0 2px 4px rgba(20, 28, 44, 0.18);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(20, 28, 44, 0.12);
+}
+
+button:focus-visible {
+  outline: 2px solid #6eb3e8;
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0.5rem 0;
 }
 
 table {
   width: 100%;
+  min-width: 520px;
   border-collapse: collapse;
 }
 
@@ -62,15 +288,178 @@ th,
 td {
   border: 1px solid #d7dbea;
   padding: 0.5rem;
+  vertical-align: top;
+}
+
+th {
+  text-align: left;
+  background: #f0f3fa;
+  font-weight: 600;
+}
+
+/* Sortable column headers (products table) — not styled as action buttons */
+th button {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  font-size: inherit;
+  text-align: left;
+  padding: 0.2rem 0.35rem;
+  width: 100%;
+  min-height: auto;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+th button:hover:not(:disabled) {
+  background: rgba(42, 51, 68, 0.08);
+  color: inherit;
+  box-shadow: none;
+  transform: none;
+}
+
+th button:focus-visible {
+  outline: 2px solid #6eb3e8;
+  outline-offset: 1px;
+}
+
+td textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 44px;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.8125rem;
+  resize: none;
+  box-sizing: border-box;
 }
 
 .actions {
   margin-top: 1rem;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
+  align-items: center;
+}
+
+.actions label {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+td .actions {
+  margin-top: 0;
+}
+
+.user-edit-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 12rem;
+}
+
+.user-new-password-label {
+  font-size: 0.8rem;
+  color: #5a6275;
 }
 
 .message {
   margin-top: 0.75rem;
   color: #1f4ab8;
+  word-break: break-word;
+}
+
+.pagination-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.pagination-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.details-toolbar select {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+@media (min-width: 600px) {
+  .grid-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .app-shell {
+    padding: 0.75rem;
+  }
+
+  main {
+    padding: 0.75rem;
+  }
+}
+
+@media (min-width: 900px) {
+  .grid-form {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
+
+  .grid-form.grid-form--two-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .site-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: nowrap;
+  }
+
+  .site-banner {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  .site-brand-title {
+    font-size: 1.2rem;
+  }
+
+  .site-logo {
+    max-height: 5rem;
+    max-width: 16rem;
+  }
+}
+
+/* Stack toolbars and pagination on narrow screens */
+@media (max-width: 599px) {
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions label {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .actions > button {
+    width: 100%;
+  }
+
+  .pagination-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pagination-bar button {
+    width: 100%;
+  }
 }
