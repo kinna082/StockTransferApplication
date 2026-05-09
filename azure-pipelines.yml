@@ -1,0 +1,70 @@
+# Azure DevOps — build, test, publish artifacts, deploy API to App Service
+#
+# Set these in Pipeline → Variables (or variable group):
+#   AzureWebAppName          — App Service name
+#   ViteApiBaseUrl           — e.g. https://YOUR-API.azurewebsites.net/api (used at frontend build)
+#
+# Variable AzureServiceConnection = name of your Azure Resource Manager service connection.
+# Optional: add AzureStaticWebApp task for frontend/dist using your Static Web App token.
+
+trigger:
+  branches:
+    include:
+      - main
+      - master
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: Release
+  solution: backend/StockTransfer.sln
+  apiProject: backend/src/StockTransfer.Api/StockTransfer.Api.csproj
+
+stages:
+  - stage: CI
+    jobs:
+      - job: Build
+        steps:
+          - task: UseDotNet@2
+            inputs:
+              packageType: sdk
+              version: 8.0.x
+
+          - script: dotnet restore $(solution) && dotnet build $(solution) --no-restore -c $(buildConfiguration)
+            displayName: Restore and build
+
+          - script: dotnet test $(solution) --no-build -c $(buildConfiguration) --verbosity normal
+            displayName: Test
+
+          - task: NodeTool@0
+            inputs:
+              versionSpec: 20.x
+
+          - script: cd frontend && npm ci && npm run build
+            displayName: Frontend build
+            env:
+              VITE_API_BASE_URL: $(ViteApiBaseUrl)
+
+          - script: dotnet publish $(apiProject) -c $(buildConfiguration) -o $(Build.ArtifactStagingDirectory)/api
+            displayName: Publish API
+
+          - publish: $(Build.ArtifactStagingDirectory)/api
+            artifact: api-publish
+
+          - publish: frontend/dist
+            artifact: frontend-dist
+
+  - stage: DeployApi
+    dependsOn: CI
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: WebDeploy
+        steps:
+          - download: current
+            artifact: api-publish
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: $(AzureServiceConnection)
+              appName: $(AzureWebAppName)
+              package: $(Pipeline.Workspace)/api-publish
