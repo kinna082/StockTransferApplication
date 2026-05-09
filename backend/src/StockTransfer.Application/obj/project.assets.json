@@ -1,0 +1,99 @@
+{
+  "version": 3,
+  "targets": {
+    "net8.0": {
+      "StockTransfer.Domain/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v8.0",
+        "compile": {
+          "bin/placeholder/StockTransfer.Domain.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/StockTransfer.Domain.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "StockTransfer.Domain/1.0.0": {
+      "type": "project",
+      "path": "../StockTransfer.Domain/StockTransfer.Domain.csproj",
+      "msbuildProject": "../StockTransfer.Domain/StockTransfer.Domain.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net8.0": [
+      "StockTransfer.Domain >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\vineesha\\.nuget\\packages\\": {},
+    "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Application\\StockTransfer.Application.csproj",
+      "projectName": "StockTransfer.Application",
+      "projectPath": "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Application\\StockTransfer.Application.csproj",
+      "packagesPath": "C:\\Users\\vineesha\\.nuget\\packages\\",
+      "outputPath": "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Application\\obj\\",
+      "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+      ],
+      "configFilePaths": [
+        "C:\\Users\\vineesha\\AppData\\Roaming\\NuGet\\NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net8.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "projectReferences": {
+            "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Domain\\StockTransfer.Domain.csproj": {
+              "projectPath": "c:\\gitrepos\\StockTransferApplication\\backend\\src\\StockTransfer.Domain\\StockTransfer.Domain.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "10.0.200"
+    },
+    "frameworks": {
+      "net8.0": {
+        "targetAlias": "net8.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.203/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}
