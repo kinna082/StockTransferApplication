@@ -87,6 +87,10 @@ export function getBranches() {
   return request("/branches");
 }
 
+export function getProducts() {
+  return request("/products");
+}
+
 export function getTransfers({ page = 1, pageSize = 10, status = "" } = {}) {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (status) params.set("status", status);

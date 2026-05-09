@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createTransfer, getBranches } from "../../services/api";
+import { createTransfer, getBranches, getProducts } from "../../services/api";
 
 const emptyRow = { productCode: "", productName: "", quantity: 0 };
 
@@ -9,13 +9,17 @@ export default function CreateTransferPage() {
   const [transferDate, setTransferDate] = useState("");
   const [rows, setRows] = useState([{ ...emptyRow }]);
   const [branches, setBranches] = useState([]);
+  const [products, setProducts] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    getBranches()
-      .then(setBranches)
-      .catch(() => setMessage("Could not load branches. Check API/DB connection."));
+    Promise.all([getBranches(), getProducts()])
+      .then(([branchData, productData]) => {
+        setBranches(branchData);
+        setProducts(productData);
+      })
+      .catch(() => setMessage("Could not load master data. Check API/DB connection."));
   }, []);
 
   const addRow = () => setRows((prev) => [...prev, { ...emptyRow }]);
@@ -24,6 +28,17 @@ export default function CreateTransferPage() {
   const updateRow = (index, field, value) => {
     setRows((prev) =>
       prev.map((row, i) => (i === index ? { ...row, [field]: field === "quantity" ? Number(value) : value } : row))
+    );
+  };
+
+  const handleProductCodeBlur = (index) => {
+    setRows((prev) =>
+      prev.map((row, i) => {
+        if (i !== index) return row;
+        const code = row.productCode.trim().toLowerCase();
+        const selected = products.find((p) => p.productCode.trim().toLowerCase() === code);
+        return { ...row, productName: selected?.productName ?? "" };
+      })
     );
   };
 
@@ -107,7 +122,11 @@ export default function CreateTransferPage() {
           {rows.map((row, index) => (
             <tr key={index}>
               <td>
-                <input value={row.productCode} onChange={(e) => updateRow(index, "productCode", e.target.value)} />
+                <input
+                  value={row.productCode}
+                  onChange={(e) => updateRow(index, "productCode", e.target.value)}
+                  onBlur={() => handleProductCodeBlur(index)}
+                />
               </td>
               <td>
                 <input value={row.productName} onChange={(e) => updateRow(index, "productName", e.target.value)} />
