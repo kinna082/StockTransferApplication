@@ -30,20 +30,27 @@ on:
 env:
   DOTNET_VERSION: "8.0.x"
   NODE_VERSION: "20.x"
-  SOLUTION_PATH: backend/StockTransfer.sln
-  API_PROJECT_PATH: backend/src/StockTransfer.Api/StockTransfer.Api.csproj
+  # Paths below are relative to backend/ (see working-directory on each dotnet step)
+  SOLUTION_FILE: StockTransfer.sln
+  API_PROJECT_FILE: src/StockTransfer.Api/StockTransfer.Api.csproj
 
 jobs:
   build-and-test:
     name: Build & test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify solution file exists
+        run: |
+          if [ ! -f "backend/${{ env.SOLUTION_FILE }}" ]; then
+            echo "::error::Expected backend/${{ env.SOLUTION_FILE }} — check repo layout (is the solution in a subfolder or named differently?)"
+            ls -la
+            ls -la backend 2>/dev/null || true
+            exit 1
+          fi
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -51,13 +58,16 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore ${{ env.SOLUTION_PATH }}
+        working-directory: backend
+        run: dotnet restore ${{ env.SOLUTION_FILE }}
 
       - name: Build
-        run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore -c Release
+        working-directory: backend
+        run: dotnet build ${{ env.SOLUTION_FILE }} --no-restore -c Release
 
       - name: Test
-        run: dotnet test ${{ env.SOLUTION_PATH }} --no-build -c Release --verbosity normal
+        working-directory: backend
+        run: dotnet test ${{ env.SOLUTION_FILE }} --no-build -c Release --verbosity normal
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -78,7 +88,8 @@ jobs:
         run: npm run build
 
       - name: Publish API package
-        run: dotnet publish ${{ env.API_PROJECT_PATH }} -c Release -o "${{ github.workspace }}/artifacts/api"
+        working-directory: backend
+        run: dotnet publish ${{ env.API_PROJECT_FILE }} -c Release -o "${{ github.workspace }}/artifacts/api"
 
       - name: Upload API artifact
         uses: actions/upload-artifact@v4

@@ -18,8 +18,9 @@ pool:
 
 variables:
   buildConfiguration: Release
-  solution: backend/StockTransfer.sln
-  apiProject: backend/src/StockTransfer.Api/StockTransfer.Api.csproj
+  backendFolder: backend
+  solutionFile: StockTransfer.sln
+  apiProjectFile: src/StockTransfer.Api/StockTransfer.Api.csproj
 
 stages:
   - stage: CI
@@ -31,11 +32,18 @@ stages:
               packageType: sdk
               version: 8.0.x
 
-          - script: dotnet restore $(solution) && dotnet build $(solution) --no-restore -c $(buildConfiguration)
-            displayName: Restore and build
+          - script: |
+              set -e
+              test -f "$(backendFolder)/$(solutionFile)" || { echo "Missing $(backendFolder)/$(solutionFile)"; ls -la; exit 1; }
+            displayName: Verify solution exists
 
-          - script: dotnet test $(solution) --no-build -c $(buildConfiguration) --verbosity normal
+          - script: dotnet restore $(solutionFile) && dotnet build $(solutionFile) --no-restore -c $(buildConfiguration)
+            displayName: Restore and build
+            workingDirectory: $(Build.SourcesDirectory)/$(backendFolder)
+
+          - script: dotnet test $(solutionFile) --no-build -c $(buildConfiguration) --verbosity normal
             displayName: Test
+            workingDirectory: $(Build.SourcesDirectory)/$(backendFolder)
 
           - task: NodeTool@0
             inputs:
@@ -46,8 +54,9 @@ stages:
             env:
               VITE_API_BASE_URL: $(ViteApiBaseUrl)
 
-          - script: dotnet publish $(apiProject) -c $(buildConfiguration) -o $(Build.ArtifactStagingDirectory)/api
+          - script: dotnet publish $(apiProjectFile) -c $(buildConfiguration) -o $(Build.ArtifactStagingDirectory)/api
             displayName: Publish API
+            workingDirectory: $(Build.SourcesDirectory)/$(backendFolder)
 
           - publish: $(Build.ArtifactStagingDirectory)/api
             artifact: api-publish
