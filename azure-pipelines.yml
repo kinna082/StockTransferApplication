@@ -5,7 +5,7 @@
 #   ViteApiBaseUrl           — e.g. https://YOUR-API.azurewebsites.net/api (used at frontend build)
 #
 # Variable AzureServiceConnection = name of your Azure Resource Manager service connection.
-# Optional: add AzureStaticWebApp task for frontend/dist using your Static Web App token.
+# Frontend `frontend-dist` artifact is for manual hosting (App Service static, Storage, CDN); no SWA deploy in this pipeline.
 
 trigger:
   branches:
