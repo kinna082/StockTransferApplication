@@ -30,6 +30,12 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+# Required for azure/login OIDC: GitHub must issue the job OIDC token (ACTIONS_ID_TOKEN_REQUEST_URL).
+# Workflow-level permissions match https://github.com/Azure/login#login-with-openid-connect-oidc-recommended
+permissions:
+  id-token: write
+  contents: read
+
 env:
   DOTNET_VERSION: "8.0.x"
   NODE_VERSION: "20.x"
