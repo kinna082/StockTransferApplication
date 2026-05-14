@@ -487,9 +487,13 @@ app.MapPost("/api/transfers", [Authorize(Roles = "STORE_MANAGER")] async (Create
 {
     var userId = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
     var user = await db.Users.FirstOrDefaultAsync(x => x.Id == userId);
-    if (user?.BranchId is null) return Results.BadRequest("Manager is not mapped to a source branch.");
+    if (user is null) return Results.Unauthorized();
 
-    var sourceBranchId = user.BranchId.Value;
+    var sourceBranchId = request.SourceBranchId;
+    if (!await db.Branches.AnyAsync(b => b.Id == sourceBranchId))
+        return Results.BadRequest("Invalid source branch.");
+    if (!await db.Branches.AnyAsync(b => b.Id == request.DestinationBranchId))
+        return Results.BadRequest("Invalid destination branch.");
     if (sourceBranchId == request.DestinationBranchId)
         return Results.BadRequest("Source and destination branch must be different.");
 

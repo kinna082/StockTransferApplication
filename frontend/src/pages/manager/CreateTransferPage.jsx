@@ -4,7 +4,7 @@ import { createTransfer, getBranches, getProducts } from "../../services/api";
 const emptyRow = { productCode: "", productName: "", quantity: 0 };
 
 export default function CreateTransferPage() {
-  const [sourceBranchId, setSourceBranchId] = useState(localStorage.getItem("userBranchId") || "");
+  const [sourceBranchId, setSourceBranchId] = useState("");
   const [destinationBranchId, setDestinationBranchId] = useState("");
   const [transferDate, setTransferDate] = useState("");
   const [rows, setRows] = useState([{ ...emptyRow }]);
@@ -12,15 +12,12 @@ export default function CreateTransferPage() {
   const [products, setProducts] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
-  const [sourceBranchLabel, setSourceBranchLabel] = useState("");
 
   useEffect(() => {
     Promise.all([getBranches(), getProducts()])
       .then(([branchData, productData]) => {
         setBranches(branchData);
         setProducts(productData);
-        const source = branchData.find((b) => String(b.id) === String(localStorage.getItem("userBranchId") || ""));
-        setSourceBranchLabel(source ? `${source.branchCode} - ${source.branchName}` : "Branch not mapped");
       })
       .catch(() => setMessage("Could not load master data. Check API/DB connection."));
   }, []);
@@ -80,20 +77,42 @@ export default function CreateTransferPage() {
       <div className="grid-form">
         <label>
           Source Branch
-          <input value={sourceBranchLabel} readOnly />
+          <select
+            value={sourceBranchId}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSourceBranchId(v);
+              if (v && v === destinationBranchId) setDestinationBranchId("");
+            }}
+          >
+            <option value="">Select source</option>
+            {branches
+              .filter((b) => String(b.id) !== String(destinationBranchId))
+              .map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.branchCode} - {b.branchName}
+                </option>
+              ))}
+          </select>
         </label>
         <label>
           Destination Branch
           <select
             value={destinationBranchId}
-            onChange={(e) => setDestinationBranchId(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setDestinationBranchId(v);
+              if (v && v === sourceBranchId) setSourceBranchId("");
+            }}
           >
             <option value="">Select destination</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.branchCode} - {b.branchName}
-              </option>
-            ))}
+            {branches
+              .filter((b) => String(b.id) !== String(sourceBranchId))
+              .map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.branchCode} - {b.branchName}
+                </option>
+              ))}
           </select>
         </label>
         <label>
