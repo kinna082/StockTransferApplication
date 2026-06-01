@@ -89,6 +89,16 @@ export default function App() {
             element={isAuthenticated && authState.role === "STORE_MANAGER" ? <ManagerDashboardPage /> : <Navigate to="/login" replace />}
           />
           <Route
+            path="/manager/transfers/:id/details"
+            element={
+              isAuthenticated && authState.role === "STORE_MANAGER" ? (
+                <TransferDetailsPage readOnly />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
             path="/admin/transfers"
             element={isAuthenticated && authState.role === "ADMIN" ? <AdminDashboardPage /> : <Navigate to="/login" replace />}
           />

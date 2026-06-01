@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { downloadTransferExcel, getStatuses, getTransferDetails, updateTransferStatus } from "../../services/api";
 
-export default function TransferDetailsPage() {
+export default function TransferDetailsPage({ readOnly = false }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [details, setDetails] = useState(null);
@@ -11,14 +11,22 @@ export default function TransferDetailsPage() {
   const [selectedStatus, setSelectedStatus] = useState("");
 
   useEffect(() => {
-    Promise.all([getTransferDetails(id), getStatuses()])
-      .then(([detailsData, statusesData]) => {
+    const detailsPromise = getTransferDetails(id);
+    const load = readOnly
+      ? detailsPromise.then((detailsData) => ({ detailsData, statusesData: [] }))
+      : Promise.all([detailsPromise, getStatuses()]).then(([detailsData, statusesData]) => ({
+          detailsData,
+          statusesData
+        }));
+
+    load
+      .then(({ detailsData, statusesData }) => {
         setDetails(detailsData);
         setStatuses(statusesData);
         setSelectedStatus(detailsData.status);
       })
       .catch(() => setMessage("Failed to load transfer details."));
-  }, [id]);
+  }, [id, readOnly]);
 
   const handleSaveStatus = async () => {
     try {
@@ -41,16 +49,20 @@ export default function TransferDetailsPage() {
         <button type="button" onClick={() => navigate(-1)}>
           Back
         </button>
-        <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
-          {statuses.map((s) => (
-            <option key={s.id} value={s.statusName}>
-              {s.statusName}
-            </option>
-          ))}
-        </select>
-        <button type="button" onClick={handleSaveStatus}>
-          Save Status
-        </button>
+        {!readOnly && (
+          <>
+            <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
+              {statuses.map((s) => (
+                <option key={s.id} value={s.statusName}>
+                  {s.statusName}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={handleSaveStatus}>
+              Save Status
+            </button>
+          </>
+        )}
         <button type="button" onClick={() => downloadTransferExcel(id)}>
           Download Excel
         </button>

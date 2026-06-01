@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getBranches, getStatuses, getTransfers } from "../../services/api";
 
 export default function ManagerDashboardPage() {
+  const navigate = useNavigate();
   const [transfers, setTransfers] = useState([]);
   const [branchMap, setBranchMap] = useState({});
   const [page, setPage] = useState(1);
@@ -85,6 +87,7 @@ export default function ManagerDashboardPage() {
             <th>Source</th>
             <th>Destination</th>
             <th>Status</th>
+            <th>Details</th>
           </tr>
         </thead>
         <tbody>
@@ -95,11 +98,16 @@ export default function ManagerDashboardPage() {
               <td>{branchMap[t.sourceBranchId] || t.sourceBranchId}</td>
               <td>{branchMap[t.destinationBranchId] || t.destinationBranchId}</td>
               <td>{t.status}</td>
+              <td>
+                <button type="button" onClick={() => navigate(`/manager/transfers/${t.id}/details`)}>
+                  Details
+                </button>
+              </td>
             </tr>
           ))}
           {transfers.length === 0 && (
             <tr>
-              <td colSpan="5">No transfer entries found.</td>
+              <td colSpan="6">No transfer entries found.</td>
             </tr>
           )}
         </tbody>
