@@ -10,47 +10,74 @@ export default function AdminDashboardPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
-  const [status, setStatus] = useState("");
+  const [activeStatus, setActiveStatus] = useState("");
   const [statuses, setStatuses] = useState([]);
   const [editingTransferId, setEditingTransferId] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("");
 
-  const load = async () => {
-    try {
-      const [transferData, branches, statusData] = await Promise.all([
-        getTransfers({ page, pageSize, status }),
-        getBranches(),
-        getStatuses()
-      ]);
-      setTransfers(transferData.items);
-      setTotalCount(transferData.totalCount);
-      setStatuses(statusData);
-      const map = {};
-      branches.forEach((b) => {
-        map[b.id] = `${b.branchCode} - ${b.branchName}`;
-      });
-      setBranchMap(map);
-    } catch {
-      setMessage("Failed to load transfers.");
-    }
-  };
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [branches, statusData] = await Promise.all([getBranches(), getStatuses()]);
+        if (cancelled) return;
+        const map = {};
+        branches.forEach((b) => {
+          map[b.id] = `${b.branchCode} - ${b.branchName}`;
+        });
+        setBranchMap(map);
+        setStatuses(statusData);
+      } catch {
+        if (!cancelled) setMessage("Failed to load master data.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
-    load();
-  }, [page, pageSize, status]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const transferData = await getTransfers({ page, pageSize, status: activeStatus });
+        if (cancelled) return;
+        setTransfers(transferData.items);
+        setTotalCount(transferData.totalCount);
+      } catch {
+        if (!cancelled) {
+          setTransfers([]);
+          setTotalCount(0);
+          setMessage("Failed to load transfers.");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [page, pageSize, activeStatus]);
 
   const handleStatusUpdate = async (transferId, status) => {
     if (!status) return;
     setMessage("");
     try {
       await updateTransferStatus(transferId, status);
-      await load();
+      const transferData = await getTransfers({ page, pageSize, status: activeStatus });
+      setTransfers(transferData.items);
+      setTotalCount(transferData.totalCount);
       setMessage("Status updated.");
       setEditingTransferId(null);
       setSelectedStatus("");
     } catch (error) {
       setMessage(error.message || "Failed to update status.");
     }
+  };
+
+  const selectStatusTab = (statusName) => {
+    setActiveStatus(statusName);
+    setPage(1);
+    setEditingTransferId(null);
+    setSelectedStatus("");
   };
 
   const startEditStatus = (transferId, currentStatus) => {
@@ -63,29 +90,37 @@ export default function AdminDashboardPage() {
     setSelectedStatus("");
   };
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
   return (
     <section>
       <h2>Admin Dashboard</h2>
       <p>View all transfers and move status forward.</p>
-      <div className="actions">
-        <label>
-          Status
-          <select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
-            }}
+
+      <div className="status-tabs" role="tablist" aria-label="Transfer status">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeStatus === ""}
+          className={`status-tab${activeStatus === "" ? " status-tab--active" : ""}`}
+          onClick={() => selectStatusTab("")}
+        >
+          All
+        </button>
+        {statuses.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            role="tab"
+            aria-selected={activeStatus === s.statusName}
+            className={`status-tab${activeStatus === s.statusName ? " status-tab--active" : ""}`}
+            onClick={() => selectStatusTab(s.statusName)}
           >
-            <option value="">All</option>
-            {statuses.map((s) => (
-              <option key={s.id} value={s.statusName}>
-                {s.statusName}
-              </option>
-            ))}
-          </select>
-        </label>
+            {s.statusName}
+          </button>
+        ))}
       </div>
+
       <div className="table-responsive">
         <table>
         <thead>
@@ -154,12 +189,12 @@ export default function AdminDashboardPage() {
           Previous
         </button>
         <span>
-          Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}
+          Page {page} of {totalPages}
         </span>
         <button
           type="button"
           onClick={() => setPage((p) => p + 1)}
-          disabled={page >= Math.max(1, Math.ceil(totalCount / pageSize))}
+          disabled={page >= totalPages}
         >
           Next
         </button>

@@ -371,6 +371,40 @@ td .actions {
   word-break: break-word;
 }
 
+.status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 1rem 0 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #d7dbea;
+}
+
+.status-tab {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  min-height: auto;
+  border-radius: 6px 6px 0 0;
+  background: #e8ecf4;
+  color: #3d4558;
+  box-shadow: none;
+}
+
+.status-tab:hover:not(:disabled) {
+  background: #dce3f0;
+  box-shadow: none;
+}
+
+.status-tab--active {
+  background: #2a3344;
+  color: #f4f6fa;
+}
+
+.status-tab--active:hover:not(:disabled) {
+  background: #1e2533;
+}
+
 .pagination-bar {
   display: flex;
   flex-wrap: wrap;
